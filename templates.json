@@ -1,4 +1,0 @@
-{
-  "channel_template": "This channel has had no activity for 60+ days and is being auto-archived to reduce channel clutter. If you feel this is a mistake you can <https://slack.com/help/articles/201563847-Archive-a-channel#unarchive-a-channel|unarchive this channel> to bring it back at any point. In the future, you can add 'noarchive' to your channel topic or purpose to avoid being archived. This script was run from a fork of this repo: https://github.com/Symantec/slack-autoarchive",
-  "join_channel_template": "Hi! As you can probably tell from my name, I am a channel cleaning bot that helps reduce the number of stale channels at Manulife. No need to do anything, though! I'll just hang out in the backround. Bye!"
-}

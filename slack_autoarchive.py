@@ -44,20 +44,6 @@ class ChannelReaper():
             keywords = keywords + whitelist_keywords.split(',')
         return list(keywords)
 
-    def get_channel_alerts(self):
-        """Get the alert message which is used to notify users in a channel of archival. """
-        archive_msg = """
-This channel has had no activity for %d days. It is being auto-archived.
-If you feel this is a mistake you can <https://get.slack.help/hc/en-us/articles/201563847-Archive-a-channel#unarchive-a-channel|unarchive this channel>.
-This will bring it back at any point. In the future, you can add '%%noarchive' to your channel topic or purpose to avoid being archived.
-This script was run from a fork of this repo: https://github.com/Symantec/slack-autoarchive
-""" % self.settings.get('days_inactive')
-        alerts = {'channel_template': archive_msg}
-        if os.path.isfile('templates.json'):
-            with open('templates.json') as filecontent:
-                alerts = json.load(filecontent)
-        return alerts
-
     # pylint: disable=too-many-arguments
     def slack_api_http(
             self,
@@ -90,14 +76,13 @@ This script was run from a fork of this repo: https://github.com/Symantec/slack-
                     'Need to setup auth. eg, BOT_SLACK_TOKEN=<secret token> python slack-autoarchive.py'
                 )
                 sys.exit(1)
-            elif response.status_code == requests.codes.ok and response.json(
-            )['ok']:
-                return response.json()
             elif response.status_code == requests.codes.too_many_requests:
                 retry_timeout = float(response.headers['Retry-After'])
                 # pylint: disable=too-many-function-args
                 return self.slack_api_http(api_endpoint, payload, method,
                                            False, retry_timeout)
+            else:
+                return response.json()
         except Exception as error_msg:
             raise Exception(error_msg)
         return None
@@ -211,28 +196,28 @@ This script was run from a fork of this repo: https://github.com/Symantec/slack-
                             payload=payload,
                             method='POST')
 
-    def archive_channel(self, channel, alert):
+    def archive_channel(self, channel):
         """ Archive a channel, and send alert to slack admins. """
         api_endpoint = 'conversations.archive'
-        stdout_message = 'Archiving channel... %s' % channel['name']
+        stdout_message = f'Archiving channel... #{channel["name"]}'
         self.logger.info(stdout_message)
 
         if not self.settings.get('dry_run'):
-            channel_message = alert.format(self.settings.get('days_inactive'))
-            self.send_channel_message(channel['id'], channel_message)
             payload = {'channel': channel['id']}
-            self.slack_api_http(api_endpoint=api_endpoint, payload=payload)
-            self.logger.info(stdout_message)
+            resp = self.slack_api_http(api_endpoint=api_endpoint, \
+                                       payload=payload)
+            if not resp['ok']:
+              stdout_message = f'Error archiving #{channel["name"]}: ' \
+                               f'{resp["error"]}'
+              self.logger.error(stdout_message)
 
-    def join_channel(self, channel_name, channel_id, message):
-        """ Joins a channel so that the bot has access to message and archive. """
+    def join_channel(self, channel_name, channel_id):
+        """ Joins a channel so that the bot can read the last message. """
         if not self.settings.get('dry_run'):
           join_api_endpoint='conversations.join'
           join_payload = {'channel': channel_id}
-          channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, payload=join_payload)
-          join_warning = channel_info.get('warning', False)
-          if not join_warning:
-              self.send_channel_message(channel_id, message)
+          channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
+                                             payload=join_payload)
         else:
           self.logger.info(
             'THIS IS A DRY RUN. BOT would have joined %s.' % channel_name)
@@ -258,13 +243,12 @@ This script was run from a fork of this repo: https://github.com/Symantec/slack-
                 'THIS IS A DRY RUN. NO CHANNELS ARE ACTUALLY ARCHIVED.')
 
         whitelist_keywords = self.get_whitelist_keywords()
-        alert_templates = self.get_channel_alerts()
         archived_channels = []
 
         # Add bot to all channels
         for channel in self.get_all_channels():
             if not  channel['is_member']:
-                self.join_channel(channel['name'], channel['id'], alert_templates['join_channel_template'])
+                self.join_channel(channel['name'], channel['id'])
 
         # Only able to archive channels that the bot is a member of
         for channel in self.get_all_channels():
@@ -275,8 +259,7 @@ This script was run from a fork of this repo: https://github.com/Symantec/slack-
                   channel, self.settings.get('too_old_datetime'))
               if (not channel_whitelisted and channel_disused):
                   archived_channels.append(channel)
-                  self.archive_channel(channel,
-                                       alert_templates['channel_template'])
+                  self.archive_channel(channel)
 
         self.send_admin_report(archived_channels)
 
