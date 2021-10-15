@@ -190,6 +190,7 @@ class ChannelReaper():
         api_endpoint = 'conversations.archive'
 
         if not self.settings.get('dry_run'):
+            self.logger.info(f'Archiving channel #{channel["name"]}')
             payload = {'channel': channel['id']}
             resp = self.slack_api_http(api_endpoint=api_endpoint, \
                                        payload=payload)
@@ -197,17 +198,21 @@ class ChannelReaper():
               stdout_message = f'Error archiving #{channel["name"]}: ' \
                                f'{resp["error"]}'
               self.logger.error(stdout_message)
+        else:
+            self.logger.info(f'THIS IS A DRY RUN. ' \
+              f'{channel["name"]} would have been archived.')
 
-    def join_channel(self, channel_name, channel_id):
+    def join_channel(self, channel):
         """ Joins a channel so that the bot can read the last message. """
         if not self.settings.get('dry_run'):
+          self.logger.info(f'Adding bot to #{channel["name"]}')
           join_api_endpoint='conversations.join'
-          join_payload = {'channel': channel_id}
+          join_payload = {'channel': channel['id']}
           channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
                                              payload=join_payload)
         else:
           self.logger.info(
-            f'THIS IS A DRY RUN. BOT would have joined {channel_name}')
+            f'THIS IS A DRY RUN. BOT would have joined {channel["name"]}')
 
     def send_admin_report(self, channels):
         """ Optionally this will message admins with which channels were archived. """
@@ -217,7 +222,7 @@ class ChannelReaper():
             admin_msg = f'Archiving {len(channels)} channels: {channel_names}'
 
             if self.settings.get('dry_run'):
-                admin_msg = '[DRY RUN] {admin_msg}'
+                admin_msg = f'[DRY RUN] {admin_msg}'
             self.send_channel_message(self.settings.get('admin_channel'),
                                       admin_msg)
 
@@ -236,10 +241,9 @@ class ChannelReaper():
               f'This could take a moment depending on the number of channels.')
         # Add bot to all public channels
         for channel in self.get_all_channels():
-            self.logger.info(f'Checking #{channel["name"]}...')
+            self.logger.info(f'Checking if the bot is in #{channel["name"]}...')
             if not channel['is_member']:
-                self.logger.info(f'Adding bot to #{channel["name"]}')
-                self.join_channel(channel['name'], channel['id'])
+                self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
         for channel in self.get_all_channels():
@@ -249,7 +253,6 @@ class ChannelReaper():
               channel_disused = self.is_channel_disused(
                   channel, self.settings.get('too_old_datetime'))
               if (not channel_whitelisted and channel_disused):
-                  self.logger.info(f'Archiving channel #{channel["name"]}')
                   archived_channels.append(channel)
                   self.archive_channel(channel)
 

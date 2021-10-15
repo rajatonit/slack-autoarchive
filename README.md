@@ -55,20 +55,17 @@ A channel will be archived by this script is it doesn't meet any of the followin
 ## What Happens When A Channel Is Archived By This Script
 
 - *Don't panic! It can be unarchived by following [these instructions](https://slack.com/intl/en-ca/help/articles/201563847#unarchive-a-channel) However all previous members would be kicked out of the channel and not be automatically invited back.
-- A message will be dropped into the channel saying the channel is being auto archived because of low activity
 - You can always whitelist a channel if it indeed needs to be kept despite meeting the auto-archive criteria.
 
-## Custom Archive Messages
+## I don't trust the DRY_RUN option to not mess up Slack environmnet or cause confusion amongst my user.
 
-Just before a channel is archived, a message will be sent with information about the archive process. The default message is:
-
-  This channel has had no activity for %s days. It is being auto-archived. If you feel this is a mistake you can <https://get.slack.help/hc/en-us/articles/201563847-Archive-a-channel#unarchive-a-channel|unarchive this channel> to bring it back at any point.'
-
-To provide a custom message, simply edit `templates.json`.
+Create a new Slack org to test this script against. Use the create_test_channels.py script to quickly create channels in your new Slack org. Edit create_test_channels.py to change the number of channels to create.
 
 ## Known Issues
 
 - Since slack doesn't have a batch API, we have to hit the api a couple times for each channel. This makes the performance of this script slow. If you have thousands of channels (which some people do), get some coffee and be patient.
+
+- Channels, such as #general, that aren't archivable is reported as being archived. This can be ignored.
 
 ## Docker
 
