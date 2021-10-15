@@ -57,7 +57,7 @@ A channel will be archived by this script is it doesn't meet any of the followin
 - *Don't panic! It can be unarchived by following [these instructions](https://slack.com/intl/en-ca/help/articles/201563847#unarchive-a-channel) However all previous members would be kicked out of the channel and not be automatically invited back.
 - You can always whitelist a channel if it indeed needs to be kept despite meeting the auto-archive criteria.
 
-## I don't trust the DRY_RUN option to not mess up Slack environmnet or cause confusion amongst my user.
+## I don't trust the DRY_RUN option to not mess up my Slack org or cause confusion amongst my users.
 
 Create a new Slack org to test this script against. Use the create_test_channels.py script to quickly create channels in your new Slack org. Edit create_test_channels.py to change the number of channels to create.
 
