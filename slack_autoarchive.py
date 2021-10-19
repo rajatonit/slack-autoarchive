@@ -44,48 +44,37 @@ class ChannelReaper():
             keywords = keywords + whitelist_keywords.split(',')
         return list(keywords)
 
-    # pylint: disable=too-many-arguments
-    def slack_api_http(
-            self,
-            api_endpoint=None,
-            payload=None,
-            method='GET',
-            # pylint: disable=unused-argument
-            retry=True,
-            retry_delay=0):
+    def slack_api_http(self, api_endpoint=None, payload=None, method='GET'):
         """ Helper function to query the slack api and handle errors and rate limit. """
-        # pylint: disable=no-member
-        uri = 'https://slack.com/api/' + api_endpoint
-        header = {'Authorization': 'Bearer ' + self.settings.get('bot_slack_token')}
+        uri = f'https://slack.com/api/{api_endpoint}'
+        header = {'Authorization': f'Bearer {self.settings.get("bot_slack_token")}'}
         try:
-            # Force request to take at least 1 second. Slack docs state:
-            # > In general we allow applications that integrate with Slack to send
-            # > no more than one message per second. We allow bursts over that
-            # > limit for short periods.
-            if retry_delay > 0:
-                time.sleep(retry_delay)
-
             if method == 'POST':
                 response = requests.post(uri, headers=header, data=payload)
             else:
                 response = requests.get(uri, headers=header, params=payload)
 
-            if response.status_code == requests.codes.ok and 'error' in response.json(
-            ) and response.json()['error'] == 'not_authed':
-                self.logger.error(
-                    'Need to setup auth. eg, BOT_SLACK_TOKEN=<secret token> python slack-autoarchive.py'
-                )
-                sys.exit(1)
-            elif response.status_code == requests.codes.too_many_requests:
-                retry_timeout = float(response.headers['Retry-After'])
-                # pylint: disable=too-many-function-args
-                return self.slack_api_http(api_endpoint, payload, method,
-                                           False, retry_timeout)
-            else:
-                return response.json()
-        except Exception as error_msg:
-            raise Exception(error_msg)
-        return None
+        except requests.exceptions.RequestException as e:
+            # TODO: Do something more interesting here?
+            raise SystemExit(e)
+
+        if response.status_code  == requests.codes.too_many_requests:
+            timeout = int(response.headers['retry-after']) + 3
+            self.logger.info(
+                f'rate-limited: Trying again in {timeout} seconds.'
+            )
+            time.sleep(timeout)
+            return self.slack_api_http(api_endpoint, payload, method)
+
+        if response.status_code == requests.codes.ok and \
+           response.json().get('error', False) == 'not_authed':
+            self.logger.error(
+                f'Need to setup auth. eg, BOT_SLACK_TOKEN=<secret token> ' \
+                f'python slack-autoarchive.py'
+            )
+            sys.exit(1)
+
+        return response.json()
 
     def get_all_channels(self):
         """ Get a list of all non-archived channels from slack channels.list. """
@@ -166,6 +155,7 @@ class ChannelReaper():
         """ Return True or False depending on if a channel is exempt from being archived. """
         # self.settings.get('skip_channel_str')
         # if the channel purpose contains the string self.settings.get('skip_channel_str'), we'll skip it.
+
         info_payload = {'channel': channel['id']}
         channel_info = self.slack_api_http(api_endpoint='conversations.info',
                                            payload=info_payload,
@@ -188,7 +178,6 @@ class ChannelReaper():
         """ Send a message to a channel or user. """
         payload = {
             'channel': channel_id,
-            'username': 'Channel Cleaner Bot',
             'text': message
         }
         api_endpoint = 'chat.postMessage'
@@ -199,38 +188,41 @@ class ChannelReaper():
     def archive_channel(self, channel):
         """ Archive a channel, and send alert to slack admins. """
         api_endpoint = 'conversations.archive'
-        stdout_message = f'Archiving channel... #{channel["name"]}'
-        self.logger.info(stdout_message)
 
         if not self.settings.get('dry_run'):
+            self.logger.info(f'Archiving channel #{channel["name"]}')
             payload = {'channel': channel['id']}
             resp = self.slack_api_http(api_endpoint=api_endpoint, \
                                        payload=payload)
-            if not resp['ok']:
+            if not resp.get('ok'):
               stdout_message = f'Error archiving #{channel["name"]}: ' \
                                f'{resp["error"]}'
               self.logger.error(stdout_message)
+        else:
+            self.logger.info(f'THIS IS A DRY RUN. ' \
+              f'{channel["name"]} would have been archived.')
 
-    def join_channel(self, channel_name, channel_id):
+    def join_channel(self, channel):
         """ Joins a channel so that the bot can read the last message. """
         if not self.settings.get('dry_run'):
+          self.logger.info(f'Adding bot to #{channel["name"]}')
           join_api_endpoint='conversations.join'
-          join_payload = {'channel': channel_id}
+          join_payload = {'channel': channel['id']}
           channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
                                              payload=join_payload)
         else:
           self.logger.info(
-            'THIS IS A DRY RUN. BOT would have joined %s.' % channel_name)
+            f'THIS IS A DRY RUN. BOT would have joined {channel["name"]}')
 
     def send_admin_report(self, channels):
         """ Optionally this will message admins with which channels were archived. """
         if self.settings.get('admin_channel'):
             channel_names = ', '.join('#' + channel['name']
                                       for channel in channels)
-            admin_msg = 'Archiving %d channels: %s' % (len(channels),
-                                                       channel_names)
+            admin_msg = f'Archiving {len(channels)} channels: {channel_names}'
+
             if self.settings.get('dry_run'):
-                admin_msg = '[DRY RUN] %s' % admin_msg
+                admin_msg = f'[DRY RUN] {admin_msg}'
             self.send_channel_message(self.settings.get('admin_channel'),
                                       admin_msg)
 
@@ -245,10 +237,13 @@ class ChannelReaper():
         whitelist_keywords = self.get_whitelist_keywords()
         archived_channels = []
 
-        # Add bot to all channels
+        self.logger.info(f'Graabing a list of all channels. ' \
+              f'This could take a moment depending on the number of channels.')
+        # Add bot to all public channels
         for channel in self.get_all_channels():
-            if not  channel['is_member']:
-                self.join_channel(channel['name'], channel['id'])
+            self.logger.info(f'Checking if the bot is in #{channel["name"]}...')
+            if not channel['is_member']:
+                self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
         for channel in self.get_all_channels():
