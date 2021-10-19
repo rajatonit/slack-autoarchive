@@ -65,7 +65,7 @@ Create a new Slack org to test this script against. Use the create_test_channels
 
 - Since slack doesn't have a batch API, we have to hit the api a couple times for each channel. This makes the performance of this script slow. If you have thousands of channels (which some people do), get some coffee and be patient.
 
-- Channels, such as #general, that aren't archivable are reported as being archived. This can be ignored.
+- Channels that aren't archivable, such as #general, are reported as being archived. This can be ignored.
 
 ## Docker
 
