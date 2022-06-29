@@ -188,8 +188,7 @@ class ChannelReaper():
     def archive_channel(self, channel):
         """ Archive a channel, and send alert to slack admins. """
         api_endpoint = 'conversations.archive'
-
-        if not self.settings.get('dry_run'):
+        if channel["name"] in ['testarchive']:
             self.logger.info(f'Archiving channel #{channel["name"]}')
             payload = {'channel': channel['id']}
             resp = self.slack_api_http(api_endpoint=api_endpoint, \
@@ -198,13 +197,23 @@ class ChannelReaper():
               stdout_message = f'Error archiving #{channel["name"]}: ' \
                                f'{resp["error"]}'
               self.logger.error(stdout_message)
-        else:
-            self.logger.info(f'THIS IS A DRY RUN. ' \
-              f'{channel["name"]} would have been archived.')
+
+        # if not self.settings.get('dry_run'):
+        #     self.logger.info(f'Archiving channel #{channel["name"]}')
+        #     payload = {'channel': channel['id']}
+        #     resp = self.slack_api_http(api_endpoint=api_endpoint, \
+        #                                payload=payload)
+        #     if not resp.get('ok'):
+        #       stdout_message = f'Error archiving #{channel["name"]}: ' \
+        #                        f'{resp["error"]}'
+        #       self.logger.error(stdout_message)
+        # else:
+        #     self.logger.info(f'THIS IS A DRY RUN. ' \
+        #       f'{channel["name"]} would have been archived.')
 
     def join_channel(self, channel):
         """ Joins a channel so that the bot can read the last message. """
-        if channel["name"] in ['#testarchive']:
+        if channel["name"] in ['testarchive']:
             self.logger.info(f'Adding bot to #{channel["name"]}')
             join_api_endpoint='conversations.join'
             join_payload = {'channel': channel['id']}
@@ -248,9 +257,10 @@ class ChannelReaper():
               f'This could take a moment depending on the number of channels.')
         # Add bot to all public channels
         for channel in self.get_all_channels():
-            self.logger.info(f'Checking if the bot is in #{channel["name"]}...')
-            if not channel['is_member']:
-                self.join_channel(channel)
+            if channel["name"] in ['testarchive']:
+                self.logger.info(f'Checking if the bot is in #{channel["name"]}...')
+                if not channel['is_member']:
+                    self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
         for channel in self.get_all_channels():
