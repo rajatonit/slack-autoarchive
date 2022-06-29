@@ -256,9 +256,9 @@ class ChannelReaper():
                   channel, self.settings.get('too_old_datetime'))
             if channel_disused:
                 self.logger.info(f'Found channel #{channel["name"]}... is < than  {too_old_date_time}. It was last updated {last_message_datetime}')
-                if not channel['is_member']:
-                    self.logger.info(f'Adding bot in #{channel["name"]}... since it is {channel_disused}')
-                    self.join_channel(channel)
+                # if not channel['is_member']:
+                #     self.logger.info(f'Adding bot in #{channel["name"]}... since it is {channel_disused}')
+                #     self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
         # for channel in self.get_all_channels():
