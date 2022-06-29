@@ -148,7 +148,7 @@ class ChannelReaper():
         min_members = self.settings.get('min_members')
         has_min_users = (min_members == 0 or min_members > num_members)
         return last_message_datetime <= too_old_datetime and (not is_user
-                                                              or has_min_users)
+                                                              or has_min_users) , last_message_datetime
 
     # If you add channels to the WHITELIST_KEYWORDS constant they will be exempt from archiving.
     def is_channel_whitelisted(self, channel, white_listed_channels):
@@ -247,23 +247,26 @@ class ChannelReaper():
         self.logger.info(f'Graabing a list of all channels. ' \
               f'This could take a moment depending on the number of channels.')
         # Add bot to all public channels
+        too_old_date_time= self.settings.get('too_old_datetime')
         for channel in self.get_all_channels():
-            channel_disused = self.is_channel_disused(
+            channel_disused , last_message_datetime = self.is_channel_disused(
                   channel, self.settings.get('too_old_datetime'))
-            if not channel['is_member'] and channel_disused:
-                self.logger.info(f'Adding bot in #{channel["name"]}... since it is {channel_disused}')
-                self.join_channel(channel)
+            if not channel_disused:
+                self.logger.info(f'Channel #{channel["name"]}... is > than  {too_old_date_time}. It was last updated {last_message_datetime}')
+            # if not channel['is_member'] and not channel_disused:
+            #     self.logger.info(f'Adding bot in #{channel["name"]}... since it is {channel_disused}')
+            #     self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
-        for channel in self.get_all_channels():
-            if channel['is_member']:
-              channel_whitelisted = self.is_channel_whitelisted(
-                  channel, whitelist_keywords)
-              channel_disused = self.is_channel_disused(
-                  channel, self.settings.get('too_old_datetime'))
-              if (not channel_whitelisted and channel_disused):
-                  archived_channels.append(channel)
-                  self.archive_channel(channel)
+        # for channel in self.get_all_channels():
+        #     if channel['is_member']:
+        #       channel_whitelisted = self.is_channel_whitelisted(
+        #           channel, whitelist_keywords)
+        #       channel_disused = self.is_channel_disused(
+        #           channel, self.settings.get('too_old_datetime'))
+        #       if (not channel_whitelisted and channel_disused):
+        #           archived_channels.append(channel)
+        #           self.archive_channel(channel)
 
         self.send_admin_report(archived_channels)
 
