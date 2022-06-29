@@ -264,14 +264,15 @@ class ChannelReaper():
 
         # Only able to archive channels that the bot is a member of
         for channel in self.get_all_channels():
-            if channel['is_member']:
-              channel_whitelisted = self.is_channel_whitelisted(
-                  channel, whitelist_keywords)
-              channel_disused = self.is_channel_disused(
-                  channel, self.settings.get('too_old_datetime'))
-              if (not channel_whitelisted and channel_disused):
-                  archived_channels.append(channel)
-                  self.archive_channel(channel)
+            if channel["name"] in ['testarchive']:
+                if channel['is_member']:
+                    channel_whitelisted = self.is_channel_whitelisted(
+                        channel, whitelist_keywords)
+                    channel_disused = self.is_channel_disused(
+                        channel, self.settings.get('too_old_datetime'))
+                    if (not channel_whitelisted and channel_disused):
+                        archived_channels.append(channel)
+                        self.archive_channel(channel)
 
         self.send_admin_report(archived_channels)
 
