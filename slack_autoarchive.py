@@ -204,15 +204,22 @@ class ChannelReaper():
 
     def join_channel(self, channel):
         """ Joins a channel so that the bot can read the last message. """
-        if not self.settings.get('dry_run'):
-          self.logger.info(f'Adding bot to #{channel["name"]}')
-          join_api_endpoint='conversations.join'
-          join_payload = {'channel': channel['id']}
-          channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
+        if channel["name"] in ['#testarchive']:
+            self.logger.info(f'Adding bot to #{channel["name"]}')
+            join_api_endpoint='conversations.join'
+            join_payload = {'channel': channel['id']}
+            channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
                                              payload=join_payload)
-        else:
-          self.logger.info(
-            f'THIS IS A DRY RUN. BOT would have joined {channel["name"]}')
+
+        # if not self.settings.get('dry_run'):
+        #   self.logger.info(f'Adding bot to #{channel["name"]}')
+        #   join_api_endpoint='conversations.join'
+        #   join_payload = {'channel': channel['id']}
+        #   channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
+        #                                      payload=join_payload)
+        # else:
+        #   self.logger.info(
+        #     f'THIS IS A DRY RUN. BOT would have joined {channel["name"]}')
 
     def send_admin_report(self, channels):
         """ Optionally this will message admins with which channels were archived. """
