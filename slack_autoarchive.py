@@ -188,7 +188,8 @@ class ChannelReaper():
     def archive_channel(self, channel):
         """ Archive a channel, and send alert to slack admins. """
         api_endpoint = 'conversations.archive'
-        if channel["name"] in ['testarchive']:
+
+        if not self.settings.get('dry_run'):
             self.logger.info(f'Archiving channel #{channel["name"]}')
             payload = {'channel': channel['id']}
             resp = self.slack_api_http(api_endpoint=api_endpoint, \
@@ -197,28 +198,18 @@ class ChannelReaper():
               stdout_message = f'Error archiving #{channel["name"]}: ' \
                                f'{resp["error"]}'
               self.logger.error(stdout_message)
-
-        # if not self.settings.get('dry_run'):
-        #     self.logger.info(f'Archiving channel #{channel["name"]}')
-        #     payload = {'channel': channel['id']}
-        #     resp = self.slack_api_http(api_endpoint=api_endpoint, \
-        #                                payload=payload)
-        #     if not resp.get('ok'):
-        #       stdout_message = f'Error archiving #{channel["name"]}: ' \
-        #                        f'{resp["error"]}'
-        #       self.logger.error(stdout_message)
-        # else:
-        #     self.logger.info(f'THIS IS A DRY RUN. ' \
-        #       f'{channel["name"]} would have been archived.')
+        else:
+            self.logger.info(f'THIS IS A DRY RUN. ' \
+              f'{channel["name"]} would have been archived.')
 
     def join_channel(self, channel):
         """ Joins a channel so that the bot can read the last message. """
-        if channel["name"] in ['testarchive']:
-            self.logger.info(f'Adding bot to #{channel["name"]}')
-            join_api_endpoint='conversations.join'
-            join_payload = {'channel': channel['id']}
-            channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
-                                             payload=join_payload)
+        # if channel["name"] in ['#testarchive']:
+        self.logger.info(f'Adding bot to #{channel["name"]}')
+        join_api_endpoint='conversations.join'
+        join_payload = {'channel': channel['id']}
+        channel_info = self.slack_api_http(api_endpoint=join_api_endpoint, \
+                                            payload=join_payload)
 
         # if not self.settings.get('dry_run'):
         #   self.logger.info(f'Adding bot to #{channel["name"]}')
@@ -257,22 +248,22 @@ class ChannelReaper():
               f'This could take a moment depending on the number of channels.')
         # Add bot to all public channels
         for channel in self.get_all_channels():
-            if channel["name"] in ['testarchive']:
-                self.logger.info(f'Checking if the bot is in #{channel["name"]}...')
-                if not channel['is_member']:
-                    self.join_channel(channel)
+            channel_disused = self.is_channel_disused(
+                  channel, self.settings.get('too_old_datetime'))
+            if not channel['is_member'] and channel_disused:
+                self.logger.info(f'Adding bot in #{channel["name"]}... since it is {channel_disused}')
+                self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
         for channel in self.get_all_channels():
-            if channel["name"] in ['testarchive']:
-                if channel['is_member']:
-                    channel_whitelisted = self.is_channel_whitelisted(
-                        channel, whitelist_keywords)
-                    channel_disused = self.is_channel_disused(
-                        channel, self.settings.get('too_old_datetime'))
-                    if (not channel_whitelisted and channel_disused):
-                        archived_channels.append(channel)
-                        self.archive_channel(channel)
+            if channel['is_member']:
+              channel_whitelisted = self.is_channel_whitelisted(
+                  channel, whitelist_keywords)
+              channel_disused = self.is_channel_disused(
+                  channel, self.settings.get('too_old_datetime'))
+              if (not channel_whitelisted and channel_disused):
+                  archived_channels.append(channel)
+                  self.archive_channel(channel)
 
         self.send_admin_report(archived_channels)
 
