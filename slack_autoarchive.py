@@ -252,22 +252,23 @@ class ChannelReaper():
             channel_disused , last_message_datetime = self.is_channel_disused(
                   channel, self.settings.get('too_old_datetime'))
             if channel_disused:
-                self.logger.info(f'Channel #{channel["name"]}... is < than  {too_old_date_time}. It was last updated {last_message_datetime}')
-            # if not channel['is_member'] and not channel_disused:
-            #     self.logger.info(f'Adding bot in #{channel["name"]}... since it is {channel_disused}')
-            #     self.join_channel(channel)
+                self.logger.info(f'Found channel #{channel["name"]}... is < than  {too_old_date_time}. It was last updated {last_message_datetime}')
+                if not channel['is_member']:
+                    self.logger.info(f'Adding bot in #{channel["name"]}... since it is {channel_disused}')
+                    self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
-        # for channel in self.get_all_channels():
-        #     if channel['is_member']:
-        #       channel_whitelisted = self.is_channel_whitelisted(
-        #           channel, whitelist_keywords)
-        #       channel_disused = self.is_channel_disused(
-        #           channel, self.settings.get('too_old_datetime'))
-        #       if (not channel_whitelisted and channel_disused):
-        #           archived_channels.append(channel)
-        #           self.archive_channel(channel)
-
+        for channel in self.get_all_channels():
+            if channel['is_member']:
+              channel_whitelisted = self.is_channel_whitelisted(
+                  channel, whitelist_keywords)
+              channel_disused = self.is_channel_disused(
+                  channel, self.settings.get('too_old_datetime'))
+              if (not channel_whitelisted and channel_disused):
+                  archived_channels.append(channel)
+                  self.archive_channel(channel)
+        self.logger.info("I archived the following channels")
+        self.logger.info(archived_channels)
         self.send_admin_report(archived_channels)
 
 if __name__ == '__main__':
