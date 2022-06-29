@@ -129,6 +129,8 @@ class ChannelReaper():
         # return bot message time if there was no user message
         if too_old_datetime >= last_bot_message_datetime > too_old_datetime:
             return (last_bot_message_datetime, False)
+        print("here")
+        print(last_bot_message_datetime)
         return (last_message_datetime, True)
 
     def is_channel_disused(self, channel, too_old_datetime):
@@ -140,6 +142,7 @@ class ChannelReaper():
         payload['channel'] = channel['id']
         channel_history = self.slack_api_http(api_endpoint=api_endpoint,
                                               payload=payload)
+        print(channel_history)
         (last_message_datetime, is_user) = self.get_last_message_timestamp(
             channel_history, datetime.fromtimestamp(float(channel['created'])))
         # mark inactive if last message is too old, but don't
@@ -258,18 +261,18 @@ class ChannelReaper():
                     self.join_channel(channel)
 
         # Only able to archive channels that the bot is a member of
-        for channel in self.get_all_channels():
-            if channel['is_member']:
-              channel_whitelisted = self.is_channel_whitelisted(
-                  channel, whitelist_keywords)
-              channel_disused = self.is_channel_disused(
-                  channel, self.settings.get('too_old_datetime'))
-              if (not channel_whitelisted and channel_disused):
-                  archived_channels.append(channel)
-                  self.archive_channel(channel)
-        self.logger.info("I archived the following channels")
-        self.logger.info(archived_channels)
-        self.send_admin_report(archived_channels)
+        # for channel in self.get_all_channels():
+        #     if channel['is_member']:
+        #       channel_whitelisted = self.is_channel_whitelisted(
+        #           channel, whitelist_keywords)
+        #       channel_disused = self.is_channel_disused(
+        #           channel, self.settings.get('too_old_datetime'))
+        #       if (not channel_whitelisted and channel_disused):
+        #           archived_channels.append(channel)
+        #           self.archive_channel(channel)
+        # self.logger.info("I archived the following channels")
+        # self.logger.info(archived_channels)
+        # self.send_admin_report(archived_channels)
 
 if __name__ == '__main__':
     CHANNEL_REAPER = ChannelReaper()
