@@ -107,31 +107,38 @@ class ChannelReaper():
             })
         return all_channels
 
-    def get_last_message_timestamp(self, channel_history, too_old_datetime):
+    def get_last_message_timestamp(channel_history, too_old_datetime):
         """ Get the last message from a slack channel, and return the time. """
-        last_message_datetime = too_old_datetime
+        last_message_datetime = None
         last_bot_message_datetime = too_old_datetime
 
         if 'messages' not in channel_history:
-            return (last_message_datetime, False)  # no messages
+
+            return (too_old_datetime, False)  # no messages
 
         for message in channel_history['messages']:
             if 'subtype' in message and message[
-                    'subtype'] in self.settings.get('skip_subtypes'):
+                    'subtype'] in ['channel_leave', 'channel_join']:
                 continue
             last_message_datetime = datetime.fromtimestamp(float(
                 message['ts']))
+            # print(last_message_datetime)
             break
         # for folks with the free plan, sometimes there is no last message,
         # then just set last_message_datetime to epoch
-        if not last_message_datetime:
-            last_bot_message_datetime = datetime.utcfromtimestamp(0)
+        # if not last_message_datetime:
+        #     last_bot_message_datetime = datetime.utcfromtimestamp(0)
         # return bot message time if there was no user message
-        if too_old_datetime >= last_bot_message_datetime > too_old_datetime:
-            return (last_bot_message_datetime, False)
-        print("here")
-        print(last_bot_message_datetime)
+        if last_message_datetime == None:
+            return (too_old_datetime, False)
+            
+        # if too_old_datetime >= last_bot_message_datetime > too_old_datetime:
+        #     return (last_bot_message_datetime, False)
+        
+        # print(last_message_datetime)
+     
         return (last_message_datetime, True)
+        
 
     def is_channel_disused(self, channel, too_old_datetime):
         """ Return True or False depending on if a channel is "active" or not.  """
