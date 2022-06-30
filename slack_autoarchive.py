@@ -278,8 +278,6 @@ class ChannelReaper():
             if channel['is_member']:
               channel_whitelisted = self.is_channel_whitelisted(
                   channel, whitelist_keywords)
-              channel_disused = self.is_channel_disused(
-                  channel, self.settings.get('too_old_datetime'))
               if (not channel_whitelisted and channel_disused):
                   archived_channels.append(channel)
                   self.archive_channel(channel)
