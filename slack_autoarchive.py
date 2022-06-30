@@ -107,7 +107,7 @@ class ChannelReaper():
             })
         return all_channels
 
-    def get_last_message_timestamp(channel_history, too_old_datetime):
+    def get_last_message_timestamp(self, channel_history, too_old_datetime):
         """ Get the last message from a slack channel, and return the time. """
         last_message_datetime = None
         last_bot_message_datetime = too_old_datetime
@@ -148,7 +148,7 @@ class ChannelReaper():
         payload['channel'] = channel['id']
         channel_history = self.slack_api_http(api_endpoint=api_endpoint,
                                               payload=payload)
-        print(channel_history)
+        # print(channel_history)
         (last_message_datetime, is_user) = self.get_last_message_timestamp(
             channel_history, datetime.fromtimestamp(float(channel['created'])))
         # mark inactive if last message is too old, but don't
