@@ -113,7 +113,6 @@ class ChannelReaper():
         last_bot_message_datetime = too_old_datetime
 
         if 'messages' not in channel_history:
-
             return (too_old_datetime, False)  # no messages
 
         for message in channel_history['messages']:
